@@ -6,26 +6,35 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
 import threading
+import random
 
 class EtutListesiProgrami:
     def __init__(self, root):
         self.root = root
         self.root.title("Etüt Listesi Oluşturucu")
-        self.root.geometry("900x750")
+        self.root.geometry("1000x800")
         self.root.resizable(True, True)
         
-        # Modern renkler - Daha canlı ve profesyonel
+        # Modern Material Design renk paleti
         self.colors = {
-            'primary': '#4A90E2',
-            'success': '#50C878',
-            'danger': '#FF6B6B',
-            'warning': '#FFA500',
-            'dark': '#2C3E50',
-            'light': '#F5F7FA',
-            'white': '#FFFFFF',
-            'accent': '#6C5CE7',
-            'info': '#00D2FF'
+            'bg': '#F3F4F6',           # Arka plan - çok açık gri
+            'card': '#FFFFFF',          # Kartlar - tam beyaz
+            'primary': '#3B82F6',       # Mavi - ana renk
+            'primary_hover': '#2563EB',  # Mavi hover
+            'success': '#10B981',       # Yeşil - başarı
+            'success_hover': '#059669', # Yeşil hover
+            'danger': '#EF4444',        # Kırmızı - tehlike
+            'danger_hover': '#DC2626',  # Kırmızı hover
+            'text_primary': '#111827',  # Ana metin - koyu gri
+            'text_secondary': '#6B7280', # İkincil metin - orta gri
+            'text_light': '#9CA3AF',    # Açık metin
+            'border': '#E5E7EB',        # Kenarlık - açık gri
+            'border_dashed': '#D1D5DB', # Kesikli çizgi - orta gri
+            'accent': '#8B5CF6'         # Vurgu rengi
         }
+        
+        # Root arka plan rengi
+        self.root.configure(bg=self.colors['bg'])
         
         # Seçilen dosyalar
         self.secili_dosyalar = []
@@ -34,207 +43,232 @@ class EtutListesiProgrami:
         self.arayuz_olustur()
         
     def arayuz_olustur(self):
-        # Başlık - Modern gradient efekti
-        baslik_frame = tk.Frame(self.root, bg=self.colors['dark'], height=100)
-        baslik_frame.pack(fill=tk.X)
-        baslik_frame.pack_propagate(False)
+        # Ana container - merkezi kart
+        main_container = tk.Frame(self.root, bg=self.colors['bg'])
+        main_container.pack(fill=tk.BOTH, expand=True, padx=30, pady=30)
         
-        # Ana başlık
+        # Merkezi kart
+        card = tk.Frame(main_container, bg=self.colors['card'], relief=tk.FLAT)
+        card.pack(fill=tk.BOTH, expand=True)
+        
+        # İçerik padding
+        content_frame = tk.Frame(card, bg=self.colors['card'], padx=40, pady=30)
+        content_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Ana başlık - Modern font
         baslik_label = tk.Label(
-            baslik_frame,
-            text="📚 Data Kent - Etüt Listesi Oluşturucu",
-            font=("Segoe UI", 22, "bold"),
-            bg=self.colors['dark'],
-            fg="white"
+            content_frame,
+            text="Etüt Listesi Oluşturucu",
+            font=("Segoe UI", 36, "bold"),
+            bg=self.colors['card'],
+            fg=self.colors['text_primary']
         )
-        baslik_label.pack(pady=20)
+        baslik_label.pack(pady=(0, 30))
         
-        # Alt başlık
-        alt_baslik = tk.Label(
-            baslik_frame,
-            text="Sınav Analizlerinden Otomatik Etüt Planı Oluşturma Sistemi",
-            font=("Segoe UI", 10),
-            bg=self.colors['dark'],
-            fg="#BDC3C7"
+        # Dosya yönetimi bölümü - Drag & Drop ve Liste birlikte
+        dosya_yonetim_frame = tk.Frame(content_frame, bg=self.colors['card'])
+        dosya_yonetim_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
+        
+        # Sol taraf: Drag & Drop alanı
+        drop_container = tk.Frame(dosya_yonetim_frame, bg=self.colors['card'])
+        drop_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        drop_label = tk.Label(
+            drop_container,
+            text="Dosya Ekleme",
+            font=("Segoe UI", 11, "bold"),
+            bg=self.colors['card'],
+            fg=self.colors['text_primary']
         )
-        alt_baslik.pack(pady=(0, 20))
+        drop_label.pack(anchor=tk.W, pady=(0, 8))
         
-        # Ana içerik - Modern card tasarımı
-        icerik_frame = tk.Frame(self.root, bg=self.colors['light'], padx=25, pady=25)
-        icerik_frame.pack(fill=tk.BOTH, expand=True)
+        drop_frame = tk.Frame(drop_container, bg=self.colors['card'])
+        drop_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Açıklama kartı
-        aciklama_frame = tk.Frame(
-            icerik_frame,
-            bg=self.colors['white'],
+        self.drop_canvas = tk.Canvas(
+            drop_frame,
+            bg="#FAFBFC",
+            highlightthickness=0,
             relief=tk.FLAT,
-            padx=20,
-            pady=15
+            height=180
         )
-        aciklama_frame.pack(fill=tk.X, pady=(0, 20))
+        self.drop_canvas.pack(fill=tk.BOTH, expand=True)
         
-        aciklama = tk.Label(
-            aciklama_frame,
-            text="📋 Sınav analiz dosyalarınızı seçin ve otomatik etüt listesi oluşturun.",
+        # Drop alanı metni ve ikon
+        drop_text_frame = tk.Frame(self.drop_canvas, bg="#FAFBFC")
+        self.drop_text_frame_id = self.drop_canvas.create_window(0, 0, window=drop_text_frame, anchor="center", tags="drop_content")
+        
+        # İkon (basit metin ikon)
+        icon_label = tk.Label(
+            drop_text_frame,
+            text="📁",
+            font=("Segoe UI", 36),
+            bg="#FAFBFC",
+            fg=self.colors['text_light']
+        )
+        icon_label.pack()
+        
+        self.drop_text = tk.Label(
+            drop_text_frame,
+            text="Drag & Drop ile\ndosya seçin",
             font=("Segoe UI", 11),
-            fg="#34495e",
-            bg=self.colors['white']
+            fg=self.colors['text_secondary'],
+            bg="#FAFBFC"
         )
-        aciklama.pack(pady=5)
+        self.drop_text.pack(pady=(8, 0))
         
-        # Bilgi notu
-        bilgi_notu = tk.Label(
-            aciklama_frame,
-            text="💡 İpucu: Birden fazla dosya seçebilir, klasör ekleyebilirsiniz. Etüt grupları maksimum 4 kişi olacak şekilde otomatik oluşturulur.",
-            font=("Segoe UI", 9),
-            fg="#7f8c8d",
-            bg=self.colors['white'],
-            wraplength=800,
-            justify=tk.LEFT
+        # Kesikli çizgili kenarlık çiz
+        self.drop_canvas.bind("<Configure>", self.ciz_drop_alani)
+        
+        # Sağ taraf: Dosya listesi
+        liste_container_frame = tk.Frame(dosya_yonetim_frame, bg=self.colors['card'])
+        liste_container_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        
+        liste_label = tk.Label(
+            liste_container_frame,
+            text="Eklenen Dosyalar",
+            font=("Segoe UI", 11, "bold"),
+            bg=self.colors['card'],
+            fg=self.colors['text_primary']
         )
-        bilgi_notu.pack(pady=(5, 0))
+        liste_label.pack(anchor=tk.W, pady=(0, 8))
         
-        # Dosya seçme bölümü - Modern card
-        dosya_frame = tk.Frame(
-            icerik_frame,
-            bg=self.colors['white'],
-            relief=tk.FLAT,
-            padx=20,
-            pady=20
-        )
-        dosya_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
-        
-        # Başlık
-        baslik_dosya = tk.Label(
-            dosya_frame,
-            text="📁 Dosya Yönetimi",
-            font=("Segoe UI", 12, "bold"),
-            bg=self.colors['white'],
-            fg=self.colors['dark']
-        )
-        baslik_dosya.pack(anchor=tk.W, pady=(0, 15))
-        
-        # Dosya listesi - Modern liste kutusu
-        liste_container = tk.Frame(dosya_frame, bg=self.colors['white'])
-        liste_container.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        liste_container = tk.Frame(liste_container_frame, bg=self.colors['card'])
+        liste_container.pack(fill=tk.BOTH, expand=True)
         
         # Scrollbar
         scrollbar = tk.Scrollbar(liste_container, orient=tk.VERTICAL)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Liste kutusu - Modern stil
-        listbox_frame = tk.Frame(liste_container, bg="#f8f9fa", relief=tk.SOLID, bd=1)
-        listbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Liste kutusu - Modern stil (çoklu seçim, yuvarlatılmış görünüm)
+        listbox_frame = tk.Frame(liste_container, bg="#FAFBFC", relief=tk.FLAT)
+        listbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=2, pady=2)
         
         self.dosya_listbox = tk.Listbox(
             listbox_frame,
             yscrollcommand=scrollbar.set,
-            font=("Segoe UI", 10),
-            height=10,
-            bg="#f8f9fa",
-            fg="#333",
+            font=("Segoe UI", 11),
+            height=8,
+            bg="#FFFFFF",
+            fg=self.colors['text_primary'],
             selectbackground=self.colors['primary'],
             selectforeground="white",
             relief=tk.FLAT,
             bd=0,
-            highlightthickness=0
+            highlightthickness=0,
+            selectmode=tk.EXTENDED  # Çoklu seçim
         )
-        self.dosya_listbox.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        self.dosya_listbox.pack(fill=tk.BOTH, expand=True, padx=3, pady=3)
         scrollbar.config(command=self.dosya_listbox.yview)
         
-        # Butonlar - Modern buton tasarımı
-        buton_frame = tk.Frame(dosya_frame, bg=self.colors['white'])
-        buton_frame.pack(fill=tk.X)
+        # Butonlar - Modern buton tasarımı (Drag & Drop altında)
+        buton_frame = tk.Frame(drop_container, bg=self.colors['card'])
+        buton_frame.pack(fill=tk.X, pady=(10, 0))
         
-        # Buton stili fonksiyonu
-        def modern_buton(parent, text, command, bg_color, fg_color="white", width=15):
+        # Buton stili fonksiyonu (ultra modern, yuvarlatılmış köşeler efekti)
+        def modern_buton(parent, text, command, bg_color, hover_color, fg_color="white", width=15):
+            # Modern buton için frame (gölge efekti için)
+            btn_frame = tk.Frame(parent, bg=parent.cget('bg'))
             btn = tk.Button(
-                parent,
+                btn_frame,
                 text=text,
                 command=command,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe UI", 11, "bold"),
                 bg=bg_color,
                 fg=fg_color,
-                padx=20,
-                pady=10,
+                padx=24,
+                pady=14,
                 cursor="hand2",
                 relief=tk.FLAT,
                 bd=0,
-                activebackground=bg_color,
+                activebackground=hover_color,
                 activeforeground=fg_color,
-                width=width
+                width=width,
+                borderwidth=0,
+                highlightthickness=0
             )
-            return btn
+            btn.pack(fill=tk.BOTH, expand=True)
+            
+            # Hover efekti (yumuşak geçiş + hafif büyüme)
+            def on_enter(e):
+                btn.config(bg=hover_color)
+                btn_frame.config(bg=hover_color)
+            def on_leave(e):
+                btn.config(bg=bg_color)
+                btn_frame.config(bg=parent.cget('bg'))
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            return btn_frame
         
         dosya_ekle_btn = modern_buton(
             buton_frame,
             "➕ Dosya Ekle",
             self.dosya_ekle,
             self.colors['primary'],
-            width=18
+            self.colors['primary_hover'],
+            width=14
         )
-        dosya_ekle_btn.pack(side=tk.LEFT, padx=(0, 10))
+        dosya_ekle_btn.pack(side=tk.LEFT, padx=(0, 8), fill=tk.X, expand=True)
         
         klasor_ekle_btn = modern_buton(
             buton_frame,
-            "📂 Klasör Ekle",
+            "📂 Klasör",
             self.klasor_ekle,
             self.colors['success'],
-            width=18
+            self.colors['success_hover'],
+            width=14
         )
-        klasor_ekle_btn.pack(side=tk.LEFT, padx=(0, 10))
+        klasor_ekle_btn.pack(side=tk.LEFT, padx=(0, 8), fill=tk.X, expand=True)
         
         dosya_sil_btn = modern_buton(
             buton_frame,
-            "🗑️ Seçiliyi Kaldır",
+            "🗑️ Kaldır",
             self.dosya_sil,
             self.colors['danger'],
-            width=18
+            self.colors['danger_hover'],
+            width=14
         )
-        dosya_sil_btn.pack(side=tk.LEFT)
+        dosya_sil_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # İşlem butonu - Büyük ve dikkat çekici
-        islem_frame = tk.Frame(icerik_frame, bg=self.colors['light'])
-        islem_frame.pack(fill=tk.X, pady=(10, 0))
+        # İşlem butonu - Büyük ve dikkat çekici (liste altında)
+        islem_frame = tk.Frame(content_frame, bg=self.colors['card'])
+        islem_frame.pack(fill=tk.X, pady=(20, 0))
+        
+        # Ana işlem butonu - Ultra modern
+        islem_btn_frame = tk.Frame(islem_frame, bg=self.colors['card'])
+        islem_btn_frame.pack()
         
         self.islem_btn = tk.Button(
-            islem_frame,
+            islem_btn_frame,
             text="🚀 Etüt Listesini Oluştur",
             command=self.islem_baslat,
-            font=("Segoe UI", 16, "bold"),
+            font=("Segoe UI", 18, "bold"),
             bg=self.colors['success'],
             fg="white",
-            padx=50,
-            pady=18,
+            padx=60,
+            pady=20,
             cursor="hand2",
             relief=tk.FLAT,
             bd=0,
-            activebackground="#45B878",
-            activeforeground="white"
+            activebackground=self.colors['success_hover'],
+            activeforeground="white",
+            borderwidth=0,
+            highlightthickness=0
         )
         self.islem_btn.pack()
         
-        # Bilgi kutusu
-        bilgi_kutusu = tk.Frame(
-            islem_frame,
-            bg="#E8F5E9",
-            relief=tk.FLAT,
-            padx=15,
-            pady=10
-        )
-        bilgi_kutusu.pack(fill=tk.X, pady=(15, 0))
-        
-        bilgi_text = tk.Label(
-            bilgi_kutusu,
-            text="ℹ️ Etüt Süreleri: Bireysel Etüt → 20 dakika (5 soru) | Sınıf Etütü → 40 dakika (5 soru)",
-            font=("Segoe UI", 9),
-            fg="#2E7D32",
-            bg="#E8F5E9"
-        )
-        bilgi_text.pack()
+        # Hover efekti için işlem butonu
+        def on_enter_btn(e):
+            self.islem_btn.config(bg=self.colors['success_hover'])
+        def on_leave_btn(e):
+            self.islem_btn.config(bg=self.colors['success'])
+        self.islem_btn.bind("<Enter>", on_enter_btn)
+        self.islem_btn.bind("<Leave>", on_leave_btn)
         
         # İlerleme çubuğu - Modern stil
-        progress_frame = tk.Frame(islem_frame, bg=self.colors['light'])
+        progress_frame = tk.Frame(islem_frame, bg=self.colors['card'])
         progress_frame.pack(fill=tk.X, pady=(20, 0))
         
         self.progress = ttk.Progressbar(
@@ -245,25 +279,193 @@ class EtutListesiProgrami:
         )
         self.progress.pack()
         
-        # Durum etiketi
+        # Durum etiketi - Modern font
         self.durum_label = tk.Label(
             progress_frame,
             text="Hazır",
-            font=("Segoe UI", 9),
-            fg="#7f8c8d",
-            bg=self.colors['light']
+            font=("Segoe UI", 11),
+            fg=self.colors['text_secondary'],
+            bg=self.colors['card']
         )
         self.durum_label.pack(pady=(10, 0))
+        
+        # Bilgi kutusu - Durum label'ının altında, dönen bilgiler (animasyonlu)
+        bilgi_kutusu = tk.Frame(
+            progress_frame,
+            bg="#ECFDF5",
+            relief=tk.FLAT,
+            padx=20,
+            pady=16
+        )
+        bilgi_kutusu.pack(fill=tk.X, pady=(15, 0))
+        
+        # Animasyon için Canvas
+        bilgi_canvas = tk.Canvas(
+            bilgi_kutusu,
+            bg="#ECFDF5",
+            highlightthickness=0,
+            height=50
+        )
+        bilgi_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # İki label (çıkış ve giriş için)
+        self.bilgi_text_old = tk.Label(
+            bilgi_canvas,
+            text="",
+            font=("Segoe UI", 11),
+            fg="#065F46",
+            bg="#ECFDF5",
+            wraplength=900,
+            justify=tk.CENTER
+        )
+        self.bilgi_text_new = tk.Label(
+            bilgi_canvas,
+            text="",
+            font=("Segoe UI", 11),
+            fg="#065F46",
+            bg="#ECFDF5",
+            wraplength=900,
+            justify=tk.CENTER
+        )
+        
+        # Dönen bilgiler listesi
+        self.bilgi_mesajlari = [
+            "💡 Bu uygulama sınav analiz dosyalarınızı işleyerek otomatik etüt listesi oluşturur",
+            "📋 Dosya Formatı: Excel (.xlsx, .xls) veya CSV formatında sınav analiz dosyaları kullanılmalıdır",
+            "📊 Puanlama: Sınıf başarısı %35 ve altındaysa TÜM SINIF, üstündeyse bireysel etüt uygulanır",
+            "⏰ Etüt Süreleri: Bireysel Etüt → 20 dakika (5 soru) | Sınıf Etütü → 40 dakika (5 soru)",
+            "👥 Grup Dağılımı: Etüt grupları maksimum 4 kişi olacak şekilde dengeli dağıtılır",
+            "✅ Çoğunluk Kuralı: Bir kazanımda öğrencilerin %50'den fazlası bireysel etüt alıyorsa sınıf etütü yapılır",
+            "📁 Toplu İşlem: Birden fazla dosyayı aynı anda seçebilir veya klasör ekleyebilirsiniz",
+            "🎯 Otomatik Analiz: Program dosyalarınızı analiz ederek hangi öğrencilerin hangi konulardan etüde kalacağını belirler"
+        ]
+        self.bilgi_index = 0
+        self.bilgi_animasyon_aktif = False
+        self.bilgi_canvas = bilgi_canvas
+        self.bilgi_guncelle()
         
         # Modern progressbar stili
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("Modern.Horizontal.TProgressbar",
                        background=self.colors['success'],
-                       troughcolor=self.colors['light'],
+                       troughcolor="#E5E7EB",
                        borderwidth=0,
                        lightcolor=self.colors['success'],
                        darkcolor=self.colors['success'])
+    
+    def bilgi_guncelle(self):
+        """Bilgi mesajlarını 5 saniyede bir döndür (animasyonlu geçiş)"""
+        if not hasattr(self, 'bilgi_mesajlari') or not hasattr(self, 'bilgi_canvas'):
+            return
+        
+        if self.bilgi_animasyon_aktif:
+            return
+        
+        # Canvas boyutunu al
+        self.bilgi_canvas.update_idletasks()
+        canvas_width = self.bilgi_canvas.winfo_width()
+        canvas_height = self.bilgi_canvas.winfo_height()
+        
+        if canvas_width < 10:
+            # Canvas henüz boyutlanmamış, tekrar dene
+            self.root.after(100, self.bilgi_guncelle)
+            return
+        
+        # Yeni mesaj
+        yeni_mesaj = self.bilgi_mesajlari[self.bilgi_index]
+        self.bilgi_index = (self.bilgi_index + 1) % len(self.bilgi_mesajlari)
+        
+        # Eski label varsa animasyonla çıkar
+        if hasattr(self, 'bilgi_text_old_id') and self.bilgi_text_old_id:
+            try:
+                # Eski label'ın var olup olmadığını kontrol et
+                self.bilgi_canvas.coords(self.bilgi_text_old_id)  # Hata verirse yok demektir
+            except:
+                # İlk mesaj - animasyon yok
+                self.bilgi_text_new.config(text=yeni_mesaj)
+                self.bilgi_text_new_id = self.bilgi_canvas.create_window(
+                    canvas_width / 2, canvas_height / 2,
+                    window=self.bilgi_text_new, anchor="center"
+                )
+                self.bilgi_text_old_id = self.bilgi_text_new_id
+                self.root.after(5000, self.bilgi_guncelle)
+                return
+            
+            self.bilgi_animasyon_aktif = True
+            eski_x = canvas_width / 2
+            yeni_x = -canvas_width / 2
+            
+            # Eski label'ı sola kaydır
+            def animasyon_cikis(step=0):
+                if step <= 15:
+                    x = eski_x - (eski_x - yeni_x) * (step / 15)
+                    try:
+                        self.bilgi_canvas.coords(self.bilgi_text_old_id, x, canvas_height / 2)
+                    except:
+                        pass
+                    self.root.after(15, lambda: animasyon_cikis(step + 1))
+                else:
+                    # Eski label'ı sil
+                    try:
+                        self.bilgi_canvas.delete(self.bilgi_text_old_id)
+                    except:
+                        pass
+                    
+                    # Yeni label'ı sağdan getir
+                    self.bilgi_text_new.config(text=yeni_mesaj)
+                    self.bilgi_text_new_id = self.bilgi_canvas.create_window(
+                        canvas_width * 1.5, canvas_height / 2,
+                        window=self.bilgi_text_new, anchor="center"
+                    )
+                    
+                    def animasyon_giris(step=0):
+                        if step <= 15:
+                            x = canvas_width * 1.5 - (canvas_width * 1.5 - canvas_width / 2) * (step / 15)
+                            try:
+                                self.bilgi_canvas.coords(self.bilgi_text_new_id, x, canvas_height / 2)
+                            except:
+                                pass
+                            self.root.after(15, lambda: animasyon_giris(step + 1))
+                        else:
+                            # Yeni label'ı eski yap
+                            self.bilgi_text_old_id = self.bilgi_text_new_id
+                            self.bilgi_text_old, self.bilgi_text_new = self.bilgi_text_new, self.bilgi_text_old
+                            self.bilgi_animasyon_aktif = False
+                            self.root.after(5000, self.bilgi_guncelle)  # 5 saniye sonra tekrar
+                    
+                    animasyon_giris()
+            
+            animasyon_cikis()
+        else:
+            # İlk mesaj - animasyon yok
+            self.bilgi_text_new.config(text=yeni_mesaj)
+            self.bilgi_text_new_id = self.bilgi_canvas.create_window(
+                canvas_width / 2, canvas_height / 2,
+                window=self.bilgi_text_new, anchor="center"
+            )
+            self.bilgi_text_old_id = self.bilgi_text_new_id
+            self.root.after(5000, self.bilgi_guncelle)  # 5 saniye sonra tekrar
+    
+    def ciz_drop_alani(self, event=None):
+        """Drag & Drop alanı için kesikli çizgili kenarlık çizer"""
+        self.drop_canvas.delete("border")
+        width = self.drop_canvas.winfo_width()
+        height = self.drop_canvas.winfo_height()
+        
+        if width > 1 and height > 1:
+            # Canvas içeriğini merkeze al
+            self.drop_canvas.coords(self.drop_text_frame_id, width/2, height/2)
+            
+            # Kesikli çizgi efekti (dash pattern)
+            dash = (8, 4)
+            self.drop_canvas.create_rectangle(
+                10, 10, width-10, height-10,
+                outline=self.colors['border_dashed'],
+                width=2,
+                dash=dash,
+                tags="border"
+            )
         
     def dosya_ekle(self):
         dosyalar = filedialog.askopenfilenames(
@@ -305,10 +507,10 @@ class EtutListesiProgrami:
     def dosya_sil(self):
         secili_indeksler = self.dosya_listbox.curselection()
         if not secili_indeksler:
-            messagebox.showwarning("Uyarı", "Lütfen silmek için bir dosya seçin.")
+            messagebox.showwarning("Uyarı", "Lütfen silmek için en az bir dosya seçin.")
             return
         
-        # Tersten sil
+        # Tersten sil (çoklu seçim desteği)
         for indeks in reversed(secili_indeksler):
             self.dosya_listbox.delete(indeks)
             del self.secili_dosyalar[indeks]
@@ -376,103 +578,146 @@ class EtutListesiProgrami:
                 if cikti_dosyasi:
                     df_sonuc = pd.DataFrame(tum_data)
                     
-                    # Excel'e yazarken formatlamayı iyileştir
+                    # Excel'e yazarken PROFESYONEL ve CANLI formatlama
                     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
                     from openpyxl.utils import get_column_letter
                     
                     with pd.ExcelWriter(cikti_dosyasi, engine='openpyxl') as writer:
-                        df_sonuc.to_excel(writer, index=False, sheet_name='Etüt Listesi')
+                        df_sonuc.to_excel(writer, index=False, sheet_name='Etüt Planı')
                         
-                        worksheet = writer.sheets['Etüt Listesi']
+                        worksheet = writer.sheets['Etüt Planı']
                         
-                        # Stil tanımlamaları
-                        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-                        header_font = Font(bold=True, color="FFFFFF", size=11)
+                        # MODERN VE CANLI TASARIM
+                        # 1. Font: Segoe UI (daha büyük ve okunabilir)
+                        segoe_font = Font(name='Segoe UI', size=11, color='2C3E50')
+                        segoe_font_bold = Font(name='Segoe UI', bold=True, size=11, color='2C3E50')
+                        segoe_font_header = Font(name='Segoe UI', bold=True, color='FFFFFF', size=12)
+                        
+                        # 2. Başlık satırı: Canlı mavi gradient efekti (#2563EB - daha canlı)
+                        header_fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
+                        
+                        # 3. Kenarlıklar: Daha belirgin (orta kalınlık, koyu gri)
                         border_style = Border(
-                            left=Side(style='thin'),
-                            right=Side(style='thin'),
-                            top=Side(style='thin'),
-                            bottom=Side(style='thin')
+                            left=Side(style='medium', color='D1D5DB'),
+                            right=Side(style='medium', color='D1D5DB'),
+                            top=Side(style='medium', color='D1D5DB'),
+                            bottom=Side(style='medium', color='D1D5DB')
                         )
+                        border_style_thick = Border(
+                            left=Side(style='thick', color='9CA3AF'),
+                            right=Side(style='thick', color='9CA3AF'),
+                            top=Side(style='thick', color='9CA3AF'),
+                            bottom=Side(style='thick', color='9CA3AF')
+                        )
+                        
+                        # 4. Hizalama tanımlamaları
                         center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
                         left_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
                         
-                        # Başlık satırını formatla
+                        # Başlık satırını formatla (daha canlı)
                         for cell in worksheet[1]:
                             cell.fill = header_fill
-                            cell.font = header_font
+                            cell.font = segoe_font_header
                             cell.alignment = center_align
-                            cell.border = border_style
+                            cell.border = border_style_thick
                         
-                        # Sütun genişliklerini ayarla
+                        # Sütun genişliklerini ayarla (daha geniş)
                         column_widths = {
-                            'A': 35,  # Dosya
-                            'B': 8,   # Soru
-                            'C': 55,  # Kazanım
-                            'D': 12,  # Etüt Grubu
-                            'E': 50,  # Öğrenciler
-                            'F': 80,  # Sebep (detaylı)
-                            'G': 15,  # Etüt Süresi
-                            'H': 12,  # Soru Sayısı
-                            'I': 18   # Etüt Tipi
+                            'A': 38,  # Dosya
+                            'B': 10,  # Soru
+                            'C': 60,  # Kazanım
+                            'D': 14,  # Etüt Grubu
+                            'E': 55,  # Öğrenciler
+                            'F': 85,  # Sebep (detaylı)
+                            'G': 18,  # Etüt Süresi
+                            'H': 14,  # Soru Sayısı
+                            'I': 20   # Etüt Tipi
                         }
                         
                         for col, width in column_widths.items():
                             worksheet.column_dimensions[col].width = width
                         
-                        # Satırları formatla
+                        # Satırları formatla (daha canlı renkler)
                         for row_idx, row in enumerate(worksheet.iter_rows(min_row=2, max_row=worksheet.max_row), start=2):
                             # Boş satır kontrolü
                             is_empty = all(cell.value is None or str(cell.value).strip() == '' for cell in row)
+                            
+                            # Etüt Tipi ve Öğrenciler sütunlarını kontrol et (koşullu biçimlendirme için)
+                            etut_tipi = None
+                            ogrenciler = None
+                            if len(row) > 8:
+                                etut_tipi_cell = row[8]  # Etüt Tipi sütunu (I sütunu, index 8)
+                                if etut_tipi_cell.value:
+                                    etut_tipi = str(etut_tipi_cell.value).strip()
+                            if len(row) > 4:
+                                ogrenciler_cell = row[4]  # Öğrenciler sütunu (E sütunu, index 4)
+                                if ogrenciler_cell.value:
+                                    ogrenciler = str(ogrenciler_cell.value).strip()
+                            
+                            # Koşullu biçimlendirme: Sınıf Etütü veya TÜM SINIF -> Canlı kırmızı/pembe (#FECACA - daha canlı)
+                            is_sinif_etutu = (etut_tipi == "Sınıf Etütü") or (ogrenciler == "TÜM SINIF")
+                            # Koşullu biçimlendirme: Bireysel Etüt -> Canlı mavi (#DBEAFE - daha canlı)
+                            is_bireysel_etut = (etut_tipi == "Bireysel Etüt")
                             
                             for cell in row:
                                 cell.border = border_style
                                 
                                 if is_empty:
-                                    # Boş satırları farklı renkle işaretle
-                                    cell.fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+                                    # Boş satırları farklı renkle işaretle (daha yumuşak)
+                                    cell.fill = PatternFill(start_color="F3F4F6", end_color="F3F4F6", fill_type="solid")
+                                    cell.font = Font(name='Segoe UI', size=10, color='9CA3AF')
                                 else:
-                                    # Normal satırlar
-                                    if cell.column == 1:  # Dosya sütunu
-                                        cell.alignment = left_align
-                                        cell.font = Font(bold=True, size=10)
-                                    elif cell.column == 2:  # Soru sütunu
-                                        cell.alignment = center_align
-                                        cell.font = Font(bold=True, size=10)
-                                    elif cell.column == 3:  # Kazanım sütunu
-                                        cell.alignment = left_align
-                                        cell.font = Font(size=9)
-                                    elif cell.column == 4:  # Etüt Grubu
-                                        cell.alignment = center_align
-                                        cell.font = Font(bold=True, size=10)
-                                    elif cell.column == 5:  # Öğrenciler
-                                        cell.alignment = left_align
-                                        cell.font = Font(size=9)
-                                    elif cell.column == 6:  # Sebep
-                                        cell.alignment = left_align
-                                        cell.font = Font(size=8)
-                                    elif cell.column in [7, 8, 9]:  # Etüt Süresi, Soru Sayısı, Etüt Tipi
-                                        cell.alignment = center_align
-                                        cell.font = Font(size=9)
+                                    # Koşullu biçimlendirme uygula (daha canlı renkler)
+                                    if is_sinif_etutu:
+                                        cell.fill = PatternFill(start_color="FECACA", end_color="FECACA", fill_type="solid")
+                                        cell.font = Font(name='Segoe UI', size=11, color='991B1B', bold=True)
+                                    elif is_bireysel_etut:
+                                        cell.fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
+                                        cell.font = Font(name='Segoe UI', size=11, color='1E40AF')
+                                    else:
+                                        cell.font = segoe_font
                                     
-                                    # TÜM SINIF satırlarını vurgula
-                                    if len(row) > 4 and row[4].value == "TÜM SINIF":
-                                        for cell in row:
-                                            cell.fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
-                                    
-                                    # Bireysel etüt satırlarını hafif mavi yap
-                                    elif len(row) > 8 and row[8].value == "Bireysel Etüt":
-                                        for cell in row:
-                                            try:
-                                                # Eğer renk yoksa veya varsayılan renkse
-                                                if not hasattr(cell.fill, 'start_color') or cell.fill.start_color.index == "00000000":
-                                                    cell.fill = PatternFill(start_color="E7F3FF", end_color="E7F3FF", fill_type="solid")
-                                            except:
-                                                cell.fill = PatternFill(start_color="E7F3FF", end_color="E7F3FF", fill_type="solid")
+                                    # Sütun bazlı hizalama ve formatlama
+                                    if cell.column == 1:  # Dosya sütunu - Yatay ortalı
+                                        cell.alignment = center_align
+                                        cell.font = Font(name='Segoe UI', bold=True, size=11, color='1F2937')
+                                    elif cell.column == 2:  # Soru sütunu - Yatay ortalı
+                                        cell.alignment = center_align
+                                        cell.font = Font(name='Segoe UI', bold=True, size=12, color='2563EB')
+                                    elif cell.column == 3:  # Kazanım sütunu - Sola dayalı, Wrap Text
+                                        cell.alignment = left_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = segoe_font
+                                    elif cell.column == 4:  # Etüt Grubu - Yatay ortalı
+                                        cell.alignment = center_align
+                                        cell.font = Font(name='Segoe UI', bold=True, size=12, color='059669')
+                                    elif cell.column == 5:  # Öğrenciler - Sola dayalı, Wrap Text
+                                        cell.alignment = left_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = segoe_font
+                                    elif cell.column == 6:  # Sebep - Sola dayalı, Wrap Text
+                                        cell.alignment = left_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = Font(name='Segoe UI', size=10, color='4B5563')
+                                    elif cell.column == 7:  # Etüt Süresi - Yatay ortalı
+                                        cell.alignment = center_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = Font(name='Segoe UI', size=10, color='059669', bold=True)
+                                    elif cell.column == 8:  # Soru Sayısı - Yatay ortalı
+                                        cell.alignment = center_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = Font(name='Segoe UI', size=10, color='059669', bold=True)
+                                    elif cell.column == 9:  # Etüt Tipi - Yatay ortalı
+                                        cell.alignment = center_align
+                                        if not is_sinif_etutu and not is_bireysel_etut:
+                                            cell.font = Font(name='Segoe UI', bold=True, size=11, color='7C3AED')
                         
-                        # Satır yüksekliklerini ayarla
+                        # Satır yüksekliklerini ayarla (daha yüksek - daha okunabilir)
                         for row in worksheet.iter_rows(min_row=1, max_row=worksheet.max_row):
-                            worksheet.row_dimensions[row[0].row].height = 25
+                            if row[0].row == 1:
+                                worksheet.row_dimensions[row[0].row].height = 35  # Başlık daha yüksek
+                            else:
+                                worksheet.row_dimensions[row[0].row].height = 28  # Normal satırlar daha yüksek
                     
                     self.progress.stop()
                     self.islem_btn.config(state=tk.NORMAL, text="🚀 Etüt Listesini Oluştur")
@@ -822,13 +1067,18 @@ class EtutListesiProgrami:
 
             # KURAL 1: Sınıf başarısı %35 ve altındaysa TÜM SINIF
             if sinif_yuzde <= 35:
+                # %0 kontrolü - hata uyarısı
+                sebep_metni = f"Sınıf Başarısı: %{sinif_yuzde:.1f} (≤%35)"
+                if sinif_yuzde == 0:
+                    sebep_metni += " ⚠️ UYARI: Bu kazanımda Excel dosyasında hata olabilir (Sınıf Başarısı %0)"
+                
                 etut_listesi.append({
                     "Dosya": dosya_adi,
                     "Soru": soru_no,
                     "Kazanım": konu,
                     "Etüt Grubu": 1,
                     "Öğrenciler": "TÜM SINIF",
-                    "Sebep": f"Sınıf Başarısı: %{sinif_yuzde:.1f} (≤%35)",
+                    "Sebep": sebep_metni,
                     "Etüt Süresi": "40 dakika",
                     "Soru Sayısı": "5 soru",
                     "Etüt Tipi": "Sınıf Etütü"
@@ -838,6 +1088,7 @@ class EtutListesiProgrami:
             # KURAL 2: Bireysel kontrol
             limit = max_p * 0.5
             ogrenciler_detayli = []  # (isim, puan) tuple listesi
+            sinif_mevcudu = len(df_students)  # Toplam öğrenci sayısı
             
             for _, ogrenci in df_students.iterrows():
                 try:
@@ -870,13 +1121,103 @@ class EtutListesiProgrami:
                 except:
                     continue
             
-            # Öğrencileri etüt gruplarına böl (maksimum 4 kişi)
+            # KURAL 3: Çoğunluk kontrolü - Eğer bireysel etüt alan öğrenci sayısı sınıf mevcudunun %50'sinden fazlaysa, sınıf etütü yap
+            if ogrenciler_detayli and sinif_mevcudu > 0:
+                bireysel_etut_yuzdesi = (len(ogrenciler_detayli) / sinif_mevcudu) * 100
+                if bireysel_etut_yuzdesi > 50:
+                    # Sınıf etütü yap
+                    sebep_metni = f"Sınıf Başarısı: %{sinif_yuzde:.1f} (>%35), ancak öğrencilerin %{bireysel_etut_yuzdesi:.1f}'i bireysel etüt alıyor (Çoğunluk Kuralı)"
+                    if sinif_yuzde == 0:
+                        sebep_metni += " ⚠️ UYARI: Bu kazanımda Excel dosyasında hata olabilir (Sınıf Başarısı %0)"
+                    
+                    etut_listesi.append({
+                        "Dosya": dosya_adi,
+                        "Soru": soru_no,
+                        "Kazanım": konu,
+                        "Etüt Grubu": 1,
+                        "Öğrenciler": "TÜM SINIF",
+                        "Sebep": sebep_metni,
+                        "Etüt Süresi": "40 dakika",
+                        "Soru Sayısı": "5 soru",
+                        "Etüt Tipi": "Sınıf Etütü"
+                    })
+                    continue
+            
+            # Öğrencileri etüt gruplarına dengeli böl (maksimum 4 kişi, dengeli dağıtım)
             if ogrenciler_detayli:
-                max_ogrenci_per_etut = 4
+                # Öğrenci listesini random karıştır (alfabetik sıra yerine, her seferinde farklı gruplar)
+                random.shuffle(ogrenciler_detayli)
+                
+                toplam_ogrenci = len(ogrenciler_detayli)
                 etut_grup_no = 1
                 
-                for i in range(0, len(ogrenciler_detayli), max_ogrenci_per_etut):
-                    grup_ogrenciler = ogrenciler_detayli[i:i+max_ogrenci_per_etut]
+                # Dengeli grup dağılımı algoritması
+                def dengeli_grup_dagit(toplam):
+                    """Dengeli grup dağılımı: 5→3+2, 6→3+3, 7→4+3, 8→4+4, 9→3+3+3, 10→4+3+3, 11→4+4+3, 12→4+4+4 vb."""
+                    if toplam <= 4:
+                        return [toplam]
+                    
+                    gruplar = []
+                    kalan = toplam
+                    
+                    while kalan > 0:
+                        if kalan <= 4:
+                            gruplar.append(kalan)
+                            break
+                        elif kalan == 5:
+                            gruplar.extend([3, 2])
+                            break
+                        elif kalan == 6:
+                            gruplar.extend([3, 3])
+                            break
+                        elif kalan == 7:
+                            gruplar.extend([4, 3])
+                            break
+                        elif kalan == 8:
+                            gruplar.extend([4, 4])
+                            break
+                        elif kalan == 9:
+                            gruplar.extend([3, 3, 3])
+                            break
+                        elif kalan == 10:
+                            gruplar.extend([4, 3, 3])
+                            break
+                        elif kalan == 11:
+                            gruplar.extend([4, 4, 3])
+                            break
+                        elif kalan == 12:
+                            gruplar.extend([4, 4, 4])
+                            break
+                        else:
+                            # 13 ve üzeri için: 4'lük gruplar oluştur, kalanı dengeli dağıt
+                            if kalan % 4 == 0:
+                                # Tam 4'lük gruplar
+                                gruplar.extend([4] * (kalan // 4))
+                                break
+                            elif kalan % 4 == 1:
+                                # Son grup 5 olacak, önceki gruplardan birini 3'e düşür
+                                gruplar.extend([4] * ((kalan // 4) - 1))
+                                gruplar.extend([3, 2])
+                                break
+                            elif kalan % 4 == 2:
+                                # Son grup 6 olacak, önceki gruplardan birini 3'e düşür
+                                gruplar.extend([4] * ((kalan // 4) - 1))
+                                gruplar.extend([3, 3])
+                                break
+                            else:  # kalan % 4 == 3
+                                # Son grup 7 olacak
+                                gruplar.extend([4] * (kalan // 4))
+                                gruplar.append(3)
+                                break
+                    
+                    return gruplar
+                
+                grup_boyutlari = dengeli_grup_dagit(toplam_ogrenci)
+                ogrenci_index = 0
+                
+                for grup_boyutu in grup_boyutlari:
+                    grup_ogrenciler = ogrenciler_detayli[ogrenci_index:ogrenci_index + grup_boyutu]
+                    ogrenci_index += grup_boyutu
                     
                     # Öğrenci isimlerini ve puanlarını formatla
                     ogrenci_isimleri = [og[0] for og in grup_ogrenciler]
